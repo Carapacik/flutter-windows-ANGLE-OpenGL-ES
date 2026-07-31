@@ -1,42 +1,146 @@
 # flutter-windows-ANGLE-OpenGL-ES
 
-OpenGL ES hardware accelerated rendering on Flutter Windows `Texture` Widget using ANGLE.
+OpenGL ES rendering in a Flutter Windows `Texture` widget using ANGLE.
 
-![](https://user-images.githubusercontent.com/28951144/177827046-35d2599e-6162-49a0-989f-048dc3b40bb5.png)
+![Flutter Windows ANGLE OpenGL ES example](.github/example-windows.png)
 
-## Introduction
+## Runtime
 
-[ANGLE (Almost Native Graphics Layer Engine)](https://github.com/google/angle) is used in this example, which translates these OpenGL ES calls to DirectX 11 (which Flutter Windows now supports) calls internally. The example uses the [new Direct3D texture interop capability for Flutter Windows](https://github.com/flutter/engine/pull/26840) added by [@jnschulze](https://github.com/jnschulze).
+The repository provides reproducible ANGLE development/runtime packages for
+Windows x64 and ARM64. The runtime is built from ANGLE branch `chromium/7981`,
+pinned to commit `2c5c60cd270d1596fa8abe06bd277983852f4b2b`.
 
-I compiled ANGLE for Windows on my machine & [.DLLs / .LIBs are present in this repository](https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-Direct3D-Interop/tree/master/windows/bin), which are used by the application. The code in this repository is very straightforward & procedurally written without any boilerplate. I hope this serves as a great example.
+Compiled backends:
 
-## Notes
+- Direct3D 11;
+- Desktop OpenGL;
+- native OpenGL ES;
+- Vulkan.
 
-As of 07/07/2022, you need to be on `master` channel of Flutter.
+Direct3D 11 is used by the Flutter shared-texture example. The plugin targets
+stock Flutter 3.44.8 stable and Dart `^3.12.0`.
 
-```bash
-Flutter 3.1.0-0.0.pre.1533 • channel master • https://github.com/flutter/flutter.git
-Framework • revision 78e3b93664 (5 hours ago) • 2022-07-07 08:34:06 -0400
-Engine • revision 56faff459e
-Tools • Dart 2.18.0 (build 2.18.0-261.0.dev) • DevTools 2.15.0
-```
+## Flutter example
 
-## Run
+The example renders the ANGLE Hello Triangle into a D3D11 shared texture and
+displays it with Flutter's `GpuSurfaceTexture`.
 
-```bash
-git clone https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-ES.git
-cd flutter-windows-ANGLE-OpenGL-ES
+```cmd
 cd example
-flutter run --verbose
+flutter pub get
+flutter run -d windows
 ```
 
-## Acknowlegements
+## Build ANGLE
 
-- [@jnschulze](https://github.com/jnschulze) for working on [Windows: Add Direct3D texture interoperability support](https://github.com/flutter/engine/pull/26840) in [flutter/engine](https://github.com/flutter/engine).
-- [@clarkezone](https://github.com/clarkezone) for awesome ANGLE + Windows article at [A common OpenGL renderer for UWP and Win32 using ANGLE and Win.UI.Composition](https://clarkezone.github.io/angle/2020/02/24/angle.html).
+Requirements:
 
-## References
+- Windows 11 x64;
+- Visual Studio C++ tools, Git, CMake, Python, WinGet, and 7-Zip;
+- Windows SDK `10.0.28000.0` or newer;
+- enough disk space for the ANGLE checkout and x64/ARM64 release outputs.
 
-- [Example project showing usage of ANGLE on Windows from @clarkezone](https://github.com/clarkezone/anglehosting).
-- [Interop-with-other-DirectX-code section in Microsoft's ANGLE repository](https://github.com/Microsoft/angle/wiki/Interop-with-other-DirectX-code).
-- [HelloTriangle.cpp from ANGLE repository](https://github.com/google/angle/blob/main/samples/hello_triangle/HelloTriangle.cpp).
+The exact ANGLE, depot_tools, Chromium DEPS, Vulkan, and toolchain inputs are
+stored in [config/angle.lock.json](config/angle.lock.json) and
+[config/toolchain.lock.json](config/toolchain.lock.json).
+
+Set up the pinned source checkout once:
+
+```cmd
+python scripts\windows\angle.py setup
+```
+
+Build and package x64:
+
+```cmd
+python scripts\windows\angle.py build x64
+python scripts\windows\angle.py collect x64
+python scripts\windows\angle.py verify x64
+python scripts\windows\angle.py smoke build x64
+python scripts\windows\angle.py smoke run x64
+python scripts\windows\angle.py package x64
+```
+
+Build and package ARM64:
+
+```cmd
+python scripts\windows\angle.py build arm64
+python scripts\windows\angle.py collect arm64
+python scripts\windows\angle.py verify arm64
+python scripts\windows\angle.py smoke build arm64
+python scripts\windows\angle.py package arm64
+python scripts\windows\angle.py checksums
+python scripts\windows\angle.py validate-archives --require-checksums
+```
+
+CI performs the complete build and validation workflow in
+[build-angle.yml](.github/workflows/build-angle.yml), including native ARM64
+smoke tests. Local build output and reports are stored under `.angle-work`.
+
+## Release artifacts
+
+Release `v1.1.0` produces:
+
+- `ANGLE-2c5c60cd270d-windows-x64.7z`;
+- `ANGLE-2c5c60cd270d-windows-arm64.7z`;
+- `SHA256SUMS`.
+
+Archive names use the first 12 characters of the pinned ANGLE commit. Each
+archive contains:
+
+```text
+include/EGL/**
+include/GLES2/**
+include/GLES3/**
+include/KHR/**
+lib/libEGL.dll
+lib/libGLESv2.dll
+lib/libEGL.dll.lib
+lib/libGLESv2.dll.lib
+lib/vulkan-1.dll
+lib/d3dcompiler_47.dll
+LICENSES/**
+manifest.json
+```
+
+All archive timestamps are derived from the pinned ANGLE commit. Repeating the
+build and packaging workflow with unchanged inputs produces deterministic
+outputs.
+
+Verify downloaded archives with:
+
+```powershell
+Get-FileHash -Algorithm SHA256 dist\*.7z
+python scripts\windows\angle.py validate-archives --require-checksums
+```
+
+## Validation
+
+The build verifies PE/COFF architecture, runtime imports, headers, import
+libraries, archive layout, checksums, and reproducibility metadata. The native
+smoke test creates an EGL pbuffer and OpenGL ES context, renders a triangle,
+and validates pixel readback for every compiled backend.
+
+| Backend | EGL selector |
+| --- | --- |
+| Direct3D 11 | `EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE` |
+| Desktop OpenGL | `EGL_PLATFORM_ANGLE_TYPE_OPENGL_ANGLE` |
+| Native OpenGL ES | `EGL_PLATFORM_ANGLE_TYPE_OPENGLES_ANGLE` |
+| Vulkan | `EGL_PLATFORM_ANGLE_TYPE_VULKAN_ANGLE` |
+
+## CMake integration
+
+Extract the matching archive into `${CMAKE_BINARY_DIR}/ANGLE`, add
+`ANGLE/include` to the include path, and link:
+
+```text
+ANGLE/lib/libEGL.dll.lib
+ANGLE/lib/libGLESv2.dll.lib
+```
+
+Bundle the four runtime DLLs from `ANGLE/lib` next to the Windows executable.
+
+## Acknowledgements
+
+- [@jnschulze](https://github.com/jnschulze) for Direct3D texture interop.
+- [ANGLE HelloTriangle](https://github.com/google/angle/blob/chromium/7981/samples/hello_triangle/HelloTriangle.cpp).
