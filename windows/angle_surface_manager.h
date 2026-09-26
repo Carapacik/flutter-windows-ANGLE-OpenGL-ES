@@ -15,14 +15,13 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <Windows.h>
-#include <d3d.h>
 #include <d3d11.h>
 #include <wrl.h>
 
 #include <cstdint>
 #include <functional>
 
-// |ANGLESurfaceManager| provides an abstraction around ANGLE to easily draw
+// |AngleSurfaceManager| provides an abstraction around ANGLE to easily draw
 // OpenGL ES 2.0 content & read as D3D 11 texture using shared |HANDLE|.
 // * |Draw|: Takes callback where OpenGL ES 2.0 calls can be made for rendering.
 // * |Read|: Copies the drawn content to D3D 11 texture & makes it available to
@@ -31,15 +30,15 @@
 // A large part of implementation is inspired from Flutter.
 // https://github.com/flutter/engine/blob/master/shell/platform/windows/angle_surface_manager.h
 
-class ANGLESurfaceManager {
+class AngleSurfaceManager {
  public:
   const int32_t width() const { return width_; }
   const int32_t height() const { return height_; }
   const HANDLE handle() const { return handle_; }
 
-  ANGLESurfaceManager(int32_t width, int32_t height);
+  AngleSurfaceManager(int32_t width, int32_t height);
 
-  ~ANGLESurfaceManager();
+  ~AngleSurfaceManager();
 
   void HandleResize(int32_t width, int32_t height);
 
@@ -62,7 +61,6 @@ class ANGLESurfaceManager {
 
   bool CreateAndBindEGLSurface();
 
-  IDXGIAdapter* adapter_ = nullptr;
   int32_t width_ = 1;
   int32_t height_ = 1;
   HANDLE internal_handle_ = nullptr;
@@ -73,6 +71,7 @@ class ANGLESurfaceManager {
   // D3D 11
   ID3D11Device* d3d_11_device_ = nullptr;
   ID3D11DeviceContext* d3d_11_device_context_ = nullptr;
+  bool use_warp_ = false;
   Microsoft::WRL::ComPtr<ID3D11Texture2D> internal_d3d_11_texture_2D_;
   Microsoft::WRL::ComPtr<ID3D11Texture2D> d3d_11_texture_2D_;
   // ANGLE
@@ -109,22 +108,30 @@ class ANGLESurfaceManager {
       EGL_TRUE,
       EGL_NONE,
   };
-  static constexpr EGLint kD3D9DisplayAttributes[] = {
-      EGL_PLATFORM_ANGLE_TYPE_ANGLE,
-      EGL_PLATFORM_ANGLE_TYPE_D3D9_ANGLE,
-      EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
-      EGL_PLATFORM_ANGLE_DEVICE_TYPE_HARDWARE_ANGLE,
-      EGL_NONE,
-  };
-  static constexpr EGLint kWrapDisplayAttributes[] = {
+  static constexpr EGLint kD3D11WarpDisplayAttributes[] = {
       EGL_PLATFORM_ANGLE_TYPE_ANGLE,
       EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+      EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
+      EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE,
+      EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
+      EGL_TRUE,
+      EGL_NONE,
+  };
+  static constexpr EGLint kD3D11Warp_9_3DisplayAttributes[] = {
+      EGL_PLATFORM_ANGLE_TYPE_ANGLE,
+      EGL_PLATFORM_ANGLE_TYPE_D3D11_ANGLE,
+      EGL_PLATFORM_ANGLE_DEVICE_TYPE_ANGLE,
+      EGL_PLATFORM_ANGLE_DEVICE_TYPE_D3D_WARP_ANGLE,
+      EGL_PLATFORM_ANGLE_MAX_VERSION_MAJOR_ANGLE,
+      9,
+      EGL_PLATFORM_ANGLE_MAX_VERSION_MINOR_ANGLE,
+      3,
       EGL_PLATFORM_ANGLE_ENABLE_AUTOMATIC_TRIM_ANGLE,
       EGL_TRUE,
       EGL_NONE,
   };
 
-  // Number of active instances of ANGLESurfaceManager.
+  // Number of active instances of AngleSurfaceManager.
   static int32_t instance_count_;
 };
 

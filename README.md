@@ -1,42 +1,71 @@
 # flutter-windows-ANGLE-OpenGL-ES
 
-OpenGL ES hardware accelerated rendering on Flutter Windows `Texture` Widget using ANGLE.
+Prebuilt universal ANGLE Windows runtimes for x64 and ARM64, plus a Flutter
+plugin that renders OpenGL ES in a `Texture` through a D3D11 shared handle.
 
-![](https://user-images.githubusercontent.com/28951144/177827046-35d2599e-6162-49a0-989f-048dc3b40bb5.png)
+![Flutter Windows ANGLE OpenGL ES example](.github/example-windows.png)
 
-## Introduction
+## Runtime
 
-[ANGLE (Almost Native Graphics Layer Engine)](https://github.com/google/angle) is used in this example, which translates these OpenGL ES calls to DirectX 11 (which Flutter Windows now supports) calls internally. The example uses the [new Direct3D texture interop capability for Flutter Windows](https://github.com/flutter/engine/pull/26840) added by [@jnschulze](https://github.com/jnschulze).
+The bundled ANGLE source is pinned to branch `chromium/8059`, commit
+`d10b3bd2324e42216ccd80c2bc82535d07cc674e`. Windows x64 and ARM64 packages
+include D3D11 with feature-level 9_3 compatibility and WARP fallback, desktop
+OpenGL, native OpenGL ES, Vulkan, and SwiftShader. D3D9 is disabled.
 
-I compiled ANGLE for Windows on my machine & [.DLLs / .LIBs are present in this repository](https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-Direct3D-Interop/tree/master/windows/bin), which are used by the application. The code in this repository is very straightforward & procedurally written without any boilerplate. I hope this serves as a great example.
+Use the latest stable Flutter `3.47.x` patch and its bundled Dart `3.13.x` SDK.
+The locally tested versions are recorded in the release build log. CI uses the
+bundled Dart SDK and bootstraps its native ARM64 variant on the ARM64 runner.
 
-## Notes
+## Example
 
-As of 07/07/2022, you need to be on `master` channel of Flutter.
-
-```bash
-Flutter 3.1.0-0.0.pre.1533 • channel master • https://github.com/flutter/flutter.git
-Framework • revision 78e3b93664 (5 hours ago) • 2022-07-07 08:34:06 -0400
-Engine • revision 56faff459e
-Tools • Dart 2.18.0 (build 2.18.0-261.0.dev) • DevTools 2.15.0
-```
-
-## Run
-
-```bash
-git clone https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-ES.git
-cd flutter-windows-ANGLE-OpenGL-ES
+```cmd
 cd example
-flutter run --verbose
+flutter pub get
+flutter run -d windows
 ```
 
-## Acknowlegements
+The example renders a GLES2 triangle into an ANGLE D3D11 texture and displays
+it with Flutter's `GpuSurfaceTexture`.
 
-- [@jnschulze](https://github.com/jnschulze) for working on [Windows: Add Direct3D texture interoperability support](https://github.com/flutter/engine/pull/26840) in [flutter/engine](https://github.com/flutter/engine).
-- [@clarkezone](https://github.com/clarkezone) for awesome ANGLE + Windows article at [A common OpenGL renderer for UWP and Win32 using ANGLE and Win.UI.Composition](https://clarkezone.github.io/angle/2020/02/24/angle.html).
+## Build
 
-## References
+Install Visual Studio C++ tools, the latest Windows SDK `10.0.28000.x`, Git,
+Python 3.14.7, and 7-Zip. The exact ANGLE and depot_tools revisions are in
+[config/angle.lock.json](config/angle.lock.json). ANGLE's own `DEPS` determines
+its transitive dependencies.
 
-- [Example project showing usage of ANGLE on Windows from @clarkezone](https://github.com/clarkezone/anglehosting).
-- [Interop-with-other-DirectX-code section in Microsoft's ANGLE repository](https://github.com/Microsoft/angle/wiki/Interop-with-other-DirectX-code).
-- [HelloTriangle.cpp from ANGLE repository](https://github.com/google/angle/blob/main/samples/hello_triangle/HelloTriangle.cpp).
+```cmd
+python scripts\windows\angle.py setup
+python scripts\windows\angle.py build x64
+python scripts\windows\angle.py verify x64 --install
+python scripts\windows\angle.py smoke x64
+cd example
+flutter pub get
+flutter analyze
+flutter build windows --release
+cd ..
+python scripts\windows\angle.py package x64
+```
+
+Repeat `build`, `verify`, `smoke`, and `package` for `arm64` on an ARM64 Windows
+host. The x64 host can cross-build ARM64 binaries, while the native backend
+smoke matrix must run on ARM64. CI follows this sequence for both architectures.
+
+## Release files
+
+- `ANGLE-d10b3bd2324e-windows-x64.7z`
+- `ANGLE-d10b3bd2324e-windows-arm64.7z`
+- `SHA256SUMS`
+
+The short SHA in archive names is computed from the full ANGLE commit. Packages
+contain ANGLE EGL/GLES headers, import libraries, the D3D compiler, EGL/GLES,
+Vulkan loader and SwiftShader runtime files, their licenses, and a small
+manifest. Distributed DLL and import-library timestamps use the repository HEAD
+committer timestamp recorded as `repository_commit_timestamp`; the manifest also
+records `repository_commit`. Verify each archive against its accompanying
+`SHA256SUMS`.
+
+## Acknowledgements
+
+- [@jnschulze](https://github.com/jnschulze) for Direct3D texture interop.
+- [media-kit](https://github.com/media-kit/media-kit) for the original Windows shared-texture implementation.
