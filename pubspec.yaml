@@ -1,14 +1,18 @@
 name: flutter_windows_angle_opengl_es
+description: OpenGL ES rendering in Flutter Windows textures through ANGLE and D3D11 shared surfaces.
 version: 1.0.0
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
-  flutter: ">=2.5.0"
+  sdk: ^3.14.0
 
 dependencies:
   flutter:
     sdk: flutter
-  plugin_platform_interface: ^2.0.2
+  meta: ^1.19.0
+
+dev_dependencies:
+  carapacik_lints: ^3.14.0
+  pigeon: ^30.0.3
 
 flutter:
   plugin:

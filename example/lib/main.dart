@@ -1,44 +1,45 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_windows_angle_opengl_es/flutter_windows_angle_opengl_es.dart';
+import 'package:material_ui/material_ui.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(const MyApp());
 
-class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
-
+class const MyApp({super.key}) extends StatefulWidget {
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
-  int? textureId;
+class _MyAppState() extends State<MyApp> {
+  late final Future<int?> _texture = _renderAfterFirstFrame();
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.waitUntilFirstFrameRasterized.then((_) async {
-      const channel = MethodChannel('flutter-windows-ANGLE-OpenGL-ES');
-      textureId = await channel.invokeMethod('render');
-      setState(() {});
-    });
+  Future<int?> _renderAfterFirstFrame() async {
+    await WidgetsBinding.instance.waitUntilFirstFrameRasterized;
+    if (!mounted) {
+      return null;
+    }
+    return await FlutterWindowsAngleOpenglEs().render();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          title: const Text('flutter-windows-ANGLE-OpenGL-ES'),
-        ),
-        body: Center(
-          child: textureId == null
-              ? null
-              : Texture(
-                  textureId: textureId!,
-                  filterQuality: FilterQuality.high,
-                ),
+        appBar: AppBar(title: const Text('Flutter Windows ANGLE OpenGL ES')),
+        body: SizedBox.expand(
+          child: FutureBuilder<int?>(
+            future: _texture,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('ANGLE rendering failed: ${snapshot.error}'),
+                );
+              }
+              final int? id = snapshot.data;
+              if (id == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return Texture(textureId: id, filterQuality: FilterQuality.high);
+            },
+          ),
         ),
       ),
     );

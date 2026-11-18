@@ -13,8 +13,7 @@
 extern "C" {
 #endif
 
-FLUTTER_PLUGIN_EXPORT void
-FlutterWindowsAngleOpenglEsPluginCApiRegisterWithRegistrar(
+FLUTTER_PLUGIN_EXPORT void FlutterWindowsAngleOpenglEsPluginCApiRegisterWithRegistrar(
     FlutterDesktopPluginRegistrarRef registrar);
 
 #if defined(__cplusplus)

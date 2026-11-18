@@ -2,38 +2,37 @@
 
 OpenGL ES hardware accelerated rendering on Flutter Windows `Texture` Widget using ANGLE.
 
-![](https://user-images.githubusercontent.com/28951144/177827046-35d2599e-6162-49a0-989f-048dc3b40bb5.png)
+![Flutter Windows ANGLE OpenGL ES example](.github/example-windows.png)
 
 ## Introduction
 
 [ANGLE (Almost Native Graphics Layer Engine)](https://github.com/google/angle) is used in this example, which translates these OpenGL ES calls to DirectX 11 (which Flutter Windows now supports) calls internally. The example uses the [new Direct3D texture interop capability for Flutter Windows](https://github.com/flutter/engine/pull/26840) added by [@jnschulze](https://github.com/jnschulze).
 
-I compiled ANGLE for Windows on my machine & [.DLLs / .LIBs are present in this repository](https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-Direct3D-Interop/tree/master/windows/bin), which are used by the application. The code in this repository is very straightforward & procedurally written without any boilerplate. I hope this serves as a great example.
-
-## Notes
-
-As of 07/07/2022, you need to be on `master` channel of Flutter.
-
-```bash
-Flutter 3.1.0-0.0.pre.1533 • channel master • https://github.com/flutter/flutter.git
-Framework • revision 78e3b93664 (5 hours ago) • 2022-07-07 08:34:06 -0400
-Engine • revision 56faff459e
-Tools • Dart 2.18.0 (build 2.18.0-261.0.dev) • DevTools 2.15.0
-```
+CI builds ANGLE from [`chromium/8127`](https://github.com/google/angle/tree/chromium/8127), the branch used by Chrome 158, currently the stable release for Windows. Each build resolves the branch head once and uses that commit for both architectures. The release archives record the commit in their manifests.
 
 ## Run
 
 ```bash
-git clone https://github.com/alexmercerind/flutter-windows-ANGLE-OpenGL-ES.git
-cd flutter-windows-ANGLE-OpenGL-ES
 cd example
-flutter run --verbose
+flutter run -d windows
+```
+
+## Build ANGLE
+
+Requires Visual Studio C++ tools, Windows SDK `10.0.28000.x`, Git, Python 3.12 or later, and 7-Zip.
+
+```cmd
+python tools\angle.py setup
+python tools\angle.py build x64
+python tools\angle.py install x64
+python tools\angle.py package x64
 ```
 
 ## Acknowlegements
 
 - [@jnschulze](https://github.com/jnschulze) for working on [Windows: Add Direct3D texture interoperability support](https://github.com/flutter/engine/pull/26840) in [flutter/engine](https://github.com/flutter/engine).
 - [@clarkezone](https://github.com/clarkezone) for awesome ANGLE + Windows article at [A common OpenGL renderer for UWP and Win32 using ANGLE and Win.UI.Composition](https://clarkezone.github.io/angle/2020/02/24/angle.html).
+- [media-kit](https://github.com/media-kit/media-kit) for the Windows shared-texture implementation.
 
 ## References
 
